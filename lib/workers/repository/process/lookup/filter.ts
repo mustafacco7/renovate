@@ -7,7 +7,6 @@ import * as npmVersioning from '../../../../modules/versioning/npm';
 import * as pep440 from '../../../../modules/versioning/pep440';
 import * as poetryVersioning from '../../../../modules/versioning/poetry';
 import { getRegexPredicate } from '../../../../util/string-match';
-import type { FilterConfig } from './types';
 
 function isReleaseStable(
   release: Release,
@@ -22,6 +21,21 @@ function isReleaseStable(
   }
 
   return true;
+}
+
+function isVersionInRange(version: string, range: string, versioningApi: VersioningApi): boolean {
+  if (versioningApi.isValid(range)) {
+    return versioningApi.matches(version, range);
+  } else if (semver.validRange(range)) {
+    return semver.satisfies(
+      semver.valid(version) ? version : semver.coerce(version)!,
+      range,
+    );
+  } else if (versioningApi.id === poetryVersioning.id && pep440.isValid(range)) {
+    return pep440.matches(version, range);
+  } else {
+    return false;
+  }
 }
 
 export function filterVersions(
@@ -74,38 +88,9 @@ export function filterVersions(
       filteredReleases = filteredReleases.filter(({ version }) =>
         isAllowedPred(version),
       );
-    } else if (versioningApi.isValid(allowedVersions)) {
+    } else if (isVersionInRange(allowedVersions, allowedVersions, versioningApi)) {
       filteredReleases = filteredReleases.filter((r) =>
-        versioningApi.matches(r.version, allowedVersions),
-      );
-    } else if (
-      config.versioning !== npmVersioning.id &&
-      semver.validRange(allowedVersions)
-    ) {
-      logger.debug(
-        { depName: config.depName },
-        'Falling back to npm semver syntax for allowedVersions',
-      );
-      filteredReleases = filteredReleases.filter((r) =>
-        semver.satisfies(
-          semver.valid(r.version)
-            ? r.version
-            : /* istanbul ignore next: not reachable, but it's safer to preserve it */ semver.coerce(
-                r.version,
-              )!,
-          allowedVersions,
-        ),
-      );
-    } else if (
-      config.versioning === poetryVersioning.id &&
-      pep440.isValid(allowedVersions)
-    ) {
-      logger.debug(
-        { depName: config.depName },
-        'Falling back to pypi syntax for allowedVersions',
-      );
-      filteredReleases = filteredReleases.filter((r) =>
-        pep440.matches(r.version, allowedVersions),
+        isVersionInRange(r.version, allowedVersions, versioningApi),
       );
     } else {
       const error = new Error(CONFIG_VALIDATION);
