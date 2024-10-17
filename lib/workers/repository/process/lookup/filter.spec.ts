@@ -111,4 +111,25 @@ describe('workers/repository/process/lookup/filter', () => {
       ]);
     });
   });
+
+  describe('.isVersionInRange()', () => {
+    it('should return true for versions within the specified range', () => {
+      const versioningApi = allVersioning.get('semver');
+      expect(isVersionInRange('1.2.3', '>=1.0.0 <2.0.0', versioningApi)).toBe(true);
+      expect(isVersionInRange('1.2.3', '^1.0.0', versioningApi)).toBe(true);
+      expect(isVersionInRange('1.2.3', '1.x', versioningApi)).toBe(true);
+    });
+
+    it('should return false for versions outside the specified range', () => {
+      const versioningApi = allVersioning.get('semver');
+      expect(isVersionInRange('2.0.0', '>=1.0.0 <2.0.0', versioningApi)).toBe(false);
+      expect(isVersionInRange('0.9.9', '^1.0.0', versioningApi)).toBe(false);
+      expect(isVersionInRange('2.0.0', '1.x', versioningApi)).toBe(false);
+    });
+
+    it('should handle invalid ranges gracefully', () => {
+      const versioningApi = allVersioning.get('semver');
+      expect(isVersionInRange('1.2.3', 'invalid-range', versioningApi)).toBe(false);
+    });
+  });
 });
