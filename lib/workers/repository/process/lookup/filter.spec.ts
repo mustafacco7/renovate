@@ -110,6 +110,141 @@ describe('workers/repository/process/lookup/filter', () => {
         { version: '2.1.0' },
       ]);
     });
+
+    it('should filter versions based on allowedVersions', () => {
+      const releases = [
+        { version: '1.0.0' },
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+        { version: '2.0.0' },
+      ] satisfies Release[];
+
+      const config = partial<FilterConfig>({
+        allowedVersions: '1.x',
+      });
+      const currentVersion = '1.0.0';
+      const latestVersion = '2.0.0';
+
+      const filteredVersions = filterVersions(
+        config,
+        currentVersion,
+        latestVersion,
+        releases,
+        versioning,
+      );
+
+      expect(filteredVersions).toEqual([
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+      ]);
+    });
+
+    it('should filter versions based on ignoreUnstable', () => {
+      const releases = [
+        { version: '1.0.0' },
+        { version: '1.1.0-beta' },
+        { version: '1.2.0' },
+        { version: '2.0.0-alpha' },
+      ] satisfies Release[];
+
+      const config = partial<FilterConfig>({
+        ignoreUnstable: true,
+      });
+      const currentVersion = '1.0.0';
+      const latestVersion = '2.0.0';
+
+      const filteredVersions = filterVersions(
+        config,
+        currentVersion,
+        latestVersion,
+        releases,
+        versioning,
+      );
+
+      expect(filteredVersions).toEqual([{ version: '1.2.0' }]);
+    });
+
+    it('should filter versions based on ignoreDeprecated', () => {
+      const releases = [
+        { version: '1.0.0' },
+        { version: '1.1.0', isDeprecated: true },
+        { version: '1.2.0' },
+        { version: '2.0.0', isDeprecated: true },
+      ] satisfies Release[];
+
+      const config = partial<FilterConfig>({
+        ignoreDeprecated: true,
+      });
+      const currentVersion = '1.0.0';
+      const latestVersion = '2.0.0';
+
+      const filteredVersions = filterVersions(
+        config,
+        currentVersion,
+        latestVersion,
+        releases,
+        versioning,
+      );
+
+      expect(filteredVersions).toEqual([{ version: '1.2.0' }]);
+    });
+
+    it('should handle respectLatest', () => {
+      const releases = [
+        { version: '1.0.0' },
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+        { version: '2.0.0' },
+      ] satisfies Release[];
+
+      const config = partial<FilterConfig>({
+        respectLatest: true,
+      });
+      const currentVersion = '1.0.0';
+      const latestVersion = '1.2.0';
+
+      const filteredVersions = filterVersions(
+        config,
+        currentVersion,
+        latestVersion,
+        releases,
+        versioning,
+      );
+
+      expect(filteredVersions).toEqual([
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+      ]);
+    });
+
+    it('should handle followTag', () => {
+      const releases = [
+        { version: '1.0.0' },
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+        { version: '2.0.0' },
+      ] satisfies Release[];
+
+      const config = partial<FilterConfig>({
+        followTag: 'latest',
+      });
+      const currentVersion = '1.0.0';
+      const latestVersion = '2.0.0';
+
+      const filteredVersions = filterVersions(
+        config,
+        currentVersion,
+        latestVersion,
+        releases,
+        versioning,
+      );
+
+      expect(filteredVersions).toEqual([
+        { version: '1.1.0' },
+        { version: '1.2.0' },
+        { version: '2.0.0' },
+      ]);
+    });
   });
 
   describe('.isVersionInRange()', () => {
